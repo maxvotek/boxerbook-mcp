@@ -5,7 +5,7 @@
   "description": "World professional boxing: schedule, results, boxer cards, rankings, forecasts. Free, no key.",
   "websiteUrl": "https://boxerbook.com/developers",
   "repository": { "url": "https://github.com/maxvotek/boxerbook-mcp", "source": "github" },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "remotes": [
     { "type": "streamable-http", "url": "https://mcp.boxerbook.com/mcp" }
   ]
