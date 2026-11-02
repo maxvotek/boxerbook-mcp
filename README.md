@@ -15,6 +15,10 @@ This repository holds the public metadata of the **remote MCP server** and the *
 | Registry name | `com.boxerbook/boxing` (official MCP Registry) |
 | JSON API | [boxerbook.com/developers](https://boxerbook.com/developers) · OpenAPI 3.1: [`/v1/openapi.json`](https://boxerbook.com/v1/openapi.json) |
 
+### ChatGPT
+
+One click: add the [Boxerbook plugin from the ChatGPT plugin directory](https://chatgpt.com/plugins/plugin_asdk_app_6ae8b4aba58481919a8606e886bdfd50) (or search «Boxerbook» under Plugins in ChatGPT). Free, read-only, no setup.
+
 ### Claude Code
 
 ```bash
@@ -33,7 +37,7 @@ Settings → Connectors → *Add custom connector* → URL `https://mcp.boxerboo
 { "mcpServers": { "boxerbook": { "url": "https://mcp.boxerbook.com/mcp" } } }
 ```
 
-### ChatGPT (developer mode) and other clients
+### ChatGPT developer mode (manual) and other clients
 
 Add a remote MCP server with the URL above; no authentication.
 
