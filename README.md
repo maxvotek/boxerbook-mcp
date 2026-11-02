@@ -55,6 +55,10 @@ Resources: `boxerbook://schedule/today`, `boxerbook://results/last-night`, `boxe
 
 Every answer carries a `url` field (a boxerbook.com page) to cite. `start_utc` is the start of the card, not of each bout. `forecast` is the Boxerbook model's probability that side A wins; `market` is the no-vig bookmaker consensus (via The Odds API). Neither is betting advice.
 
+## Claude skill
+
+For Claude Code, claude.ai and the API there is also a skill that teaches Claude to answer boxing questions from this server, with a link for every boxer and bout and no betting tips: [maxvotek/boxerbook-skill](https://github.com/maxvotek/boxerbook-skill). In Claude Code: `/plugin marketplace add maxvotek/boxerbook-skill`, then `/plugin install boxing@boxerbook`.
+
 ## Data and licence
 
 Records are counted from open and official sources: athletic commissions (California, Nevada, Texas, Japan), sanctioning bodies, Wikidata, Wikipedia, the press. Data: [ODbL](https://opendatacommons.org/licenses/odbl/), attribution "Boxerbook". This README, `server.json` and the examples: MIT.
