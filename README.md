@@ -1,6 +1,6 @@
 # Boxerbook MCP server
 
-**Boxerbook** ([boxerbook.com](https://boxerbook.com)) is an open catalog of professional boxing worldwide: boxers, bouts, cards, results with sources, world titles, publisher rankings (WBC, WBA, IBF, WBO, The Ring, TBRB), the Boxerbook rating and a pre-fight forecast. The data is open under [ODbL](https://opendatacommons.org/licenses/odbl/) with attribution "Boxerbook".
+**Boxerbook** ([boxerbook.com](https://boxerbook.com)) is a free catalog of professional boxing worldwide: boxers, bouts, cards, results with sources, world titles, publisher rankings (WBC, WBA, IBF, WBO, The Ring, TBRB), the Boxerbook rating and a pre-fight forecast. The data is open under [ODbL](https://opendatacommons.org/licenses/odbl/) with attribution "Boxerbook".
 
 This repository holds the public metadata of the **remote MCP server** and the **free JSON API**. The product code lives elsewhere; nothing here needs to be installed.
 
@@ -65,6 +65,6 @@ For Claude Code, claude.ai and the API there is also a skill that teaches Claude
 
 ## Data and licence
 
-Records are counted from open and official sources: athletic commissions (California, Nevada, Texas, Japan), sanctioning bodies, Wikidata, Wikipedia, the press. Data: [ODbL](https://opendatacommons.org/licenses/odbl/), attribution "Boxerbook". This README, `server.json` and the examples: MIT.
+Records are counted from open and official sources: athletic commissions (California, Nevada, Texas, Japan), sanctioning bodies, Wikidata, Wikipedia, the press. Data: free to read and cite with the credit «Data: Boxerbook (boxerbook.com)»; bulk or commercial use by agreement ([terms](https://boxerbook.com/terms#data)); data obtained before 3 November 2026 stays under the ODbL. The MCP server needs no key; the JSON API needs a free key for lookups by id ([developers](https://boxerbook.com/developers)). This README, `server.json` and the examples: MIT.
 
 Questions and corrections: [info@boxerbook.com](mailto:info@boxerbook.com) · every bout page has a "report a discrepancy" link.

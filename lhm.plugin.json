@@ -400,7 +400,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -644,7 +644,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -975,7 +975,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -1390,7 +1390,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -1863,7 +1863,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -2040,7 +2040,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -2200,7 +2200,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -2314,7 +2314,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -2406,7 +2406,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
@@ -2493,7 +2493,7 @@
                 "const": "Boxerbook"
               },
               "license": {
-                "const": "ODbL"
+                "const": "Boxerbook data terms"
               },
               "url": {
                 "type": "string"
