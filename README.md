@@ -1,6 +1,6 @@
 # Boxerbook MCP server
 
-**Boxerbook** ([boxerbook.com](https://boxerbook.com)) is a free catalog of professional boxing worldwide: boxers, bouts, cards, results with sources, world titles, publisher rankings (WBC, WBA, IBF, WBO, The Ring, TBRB), the Boxerbook rating and a pre-fight forecast. The data is open under [ODbL](https://opendatacommons.org/licenses/odbl/) with attribution "Boxerbook".
+**Boxerbook** ([boxerbook.com](https://boxerbook.com)) is a free catalog of professional boxing worldwide: boxers, bouts, cards, results with sources, world titles, publisher rankings (WBC, WBA, IBF, WBO, The Ring, TBRB), the Boxerbook rating and a pre-fight forecast. The data is free to read and cite with the credit "Data: Boxerbook" under the [Boxerbook data terms](https://boxerbook.com/terms#data).
 
 This repository holds the public metadata of the **remote MCP server** and the **free JSON API**. The product code lives elsewhere; nothing here needs to be installed.
 
