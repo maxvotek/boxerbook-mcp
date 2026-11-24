@@ -1,9 +1,24 @@
 {
   "name": "boxerbook-mcp",
-  "version": "1.0.0",
-  "description": "Boxerbook remote MCP server: professional boxing schedule, results, boxer cards, WBC/WBA/IBF/WBO/The Ring/TBRB rankings, forecasts and where to watch. Free, no key. https://mcp.boxerbook.com/mcp",
+  "version": "1.0.2",
+  "description": "Boxerbook remote MCP server: professional boxing schedule, results, boxer cards, WBC/WBA/IBF/WBO/The Ring/TBRB rankings and where to watch, plus per-bout features for fight models and sports analytics: weigh-ins, ages, layoffs, ratings, the Boxerbook win probability and the market odds consensus. Free, no key. https://mcp.boxerbook.com/mcp",
   "homepage": "https://boxerbook.com/developers",
-  "repository": { "type": "git", "url": "https://github.com/maxvotek/boxerbook-mcp" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxvotek/boxerbook-mcp"
+  },
   "license": "MIT",
-  "private": true
+  "private": true,
+  "keywords": [
+    "boxing",
+    "mcp",
+    "sports-data",
+    "sports-analytics",
+    "fight-prediction",
+    "win-probability",
+    "forecasting",
+    "odds",
+    "backtesting",
+    "data-science"
+  ]
 }

@@ -2,7 +2,7 @@
   "author": "maxvotek",
   "authorUrl": "https://github.com/maxvotek",
   "cloudEndpoint": "https://mcp.boxerbook.com/mcp",
-  "description": "Boxerbook remote MCP server: professional boxing schedule, results, boxer cards, WBC/WBA/IBF/WBO/The Ring/TBRB rankings, forecasts and where to watch. Free, no key. https://mcp.boxerbook.com/mcp",
+  "description": "Boxerbook remote MCP server: professional boxing schedule, results, boxer cards, WBC/WBA/IBF/WBO/The Ring/TBRB rankings and where to watch, plus per-bout features for fight models and sports analytics: weigh-ins, ages, layoffs, ratings, the Boxerbook win probability and the market odds consensus. Free, no key. https://mcp.boxerbook.com/mcp",
   "homepage": "https://boxerbook.com/developers",
   "identifier": "boxerbook",
   "name": "Boxerbook",
@@ -83,7 +83,7 @@
     {
       "name": "boxing_schedule",
       "title": "Boxing schedule",
-      "description": "Upcoming professional boxing cards worldwide, grouped by card: date, start_utc (card start in UTC), venue, promoter, broadcasters, and each bout with both records going in, division, scheduled rounds, title, Boxerbook forecast and market consensus when known. Use this for \"who is fighting tonight / this weekend\", \"what boxing is on\". when=today also keeps last night's cards that started under 6 hours ago. Cite the url of each card or bout.",
+      "description": "Upcoming professional boxing cards worldwide, grouped by card: date, start_utc (card start in UTC), venue, promoter, broadcasters by region, and each bout with both records going in, division, scheduled rounds, title, Boxerbook forecast (win probability) and market odds consensus when known; each card and bout with its boxerbook.com url. Answers \"is there boxing tonight\", \"who is fighting this weekend\", \"what boxing is on\" and \"what time does the card start\", asked in any language. when=today also keeps last night's cards that started under 6 hours ago. At most 60 bouts per answer, whole days first: a longer window comes back truncated with next_arguments (from_date) for the rest. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -108,12 +108,38 @@
             "description": "division code (hea, wel, w_fea) or name (heavyweight, women's featherweight)",
             "minLength": 1,
             "maxLength": 40
+          },
+          "from_date": {
+            "type": "string",
+            "description": "skip the cards before this date (YYYY-MM-DD, UTC): the next page of a truncated answer",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2000,
+            "description": "bouts of the first day to pass over: set by next_arguments when one day is longer than a page"
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         }
       },
       "outputSchema": {
         "type": "object",
         "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
           "when": {
             "enum": [
               "today",
@@ -250,6 +276,10 @@
                               "null"
                             ],
                             "description": "W-L-D going into the bout"
+                          },
+                          "country": {
+                            "type": "string",
+                            "description": "the boxer's country, ISO 3166-1 alpha-2 (the one he represents, else his citizenship, else his birthplace); schedule and results answers, a boxer with a page only"
                           }
                         },
                         "required": [
@@ -275,12 +305,28 @@
                               "null"
                             ],
                             "description": "W-L-D going into the bout"
+                          },
+                          "country": {
+                            "type": "string",
+                            "description": "the boxer's country, ISO 3166-1 alpha-2 (the one he represents, else his citizenship, else his birthplace); schedule and results answers, a boxer with a page only"
                           }
                         },
                         "required": [
                           "name",
                           "record"
                         ]
+                      },
+                      "display": {
+                        "type": "array",
+                        "items": {
+                          "enum": [
+                            "a",
+                            "b"
+                          ]
+                        },
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "description": "the order to show the two names in: ['a','b'] or ['b','a'] (the better-known boxer first, as boxerbook.com does: more Wikipedia language links, then the Boxerbook rating, then pro bouts). a, b, winner, forecast.p_a and market.p_a keep their meaning (side a); only the display order changes"
                       },
                       "division": {
                         "type": [
@@ -378,6 +424,7 @@
                       "date",
                       "a",
                       "b",
+                      "display",
                       "url"
                     ]
                   }
@@ -402,6 +449,10 @@
               "license": {
                 "const": "Boxerbook data terms"
               },
+              "terms": {
+                "type": "string",
+                "format": "uri"
+              },
               "url": {
                 "type": "string"
               }
@@ -415,12 +466,29 @@
           "as_of": {
             "type": "string"
           },
+          "shown_bouts": {
+            "type": "integer",
+            "description": "bouts in this answer"
+          },
+          "total_bouts": {
+            "type": "integer",
+            "description": "bouts in the asked window"
+          },
+          "more": {
+            "type": "string",
+            "description": "what the cap left out and how to ask for it"
+          },
+          "next_arguments": {
+            "type": "object",
+            "description": "the arguments of the call that returns the next page"
+          },
           "partial": {
             "type": "boolean",
             "description": "true when part of the data could not be read this time; retry in a minute for the full answer"
           }
         },
         "required": [
+          "cite",
           "events",
           "attribution",
           "as_of"
@@ -437,7 +505,7 @@
     {
       "name": "boxing_results",
       "title": "Boxing results",
-      "description": "Completed professional bouts of the last N days (N calendar days ending today: 1 = today, 2 = last night and today, up to 14), newest first: winner, method, round, time, both records going in and the sources of each result. Use this for \"who won last night\", \"results this weekend\". Cite the url of each bout.",
+      "description": "Completed professional bouts of the last N days (N calendar days ending today: 1 = today, 2 = last night and today, up to 14), newest first: winner, method, round, time, both records going in, the sources of each result and the boxerbook.com url of each bout. Answers \"who won last night\", \"results this weekend\" and \"did A beat B\", asked in any language. At most 60 bouts per answer, whole days first: a longer window comes back truncated with next_arguments (before_date) for the older days. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -458,12 +526,38 @@
             "description": "division code (hea, wel, w_fea) or name (heavyweight, women's featherweight)",
             "minLength": 1,
             "maxLength": 40
+          },
+          "before_date": {
+            "type": "string",
+            "description": "keep only the bouts before this date (YYYY-MM-DD, UTC): the next page of a truncated answer",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2000,
+            "description": "bouts of the first day to pass over: set by next_arguments when one day is longer than a page"
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         }
       },
       "outputSchema": {
         "type": "object",
         "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
           "days": {
             "type": "integer"
           },
@@ -518,6 +612,10 @@
                         "null"
                       ],
                       "description": "W-L-D going into the bout"
+                    },
+                    "country": {
+                      "type": "string",
+                      "description": "the boxer's country, ISO 3166-1 alpha-2 (the one he represents, else his citizenship, else his birthplace); schedule and results answers, a boxer with a page only"
                     }
                   },
                   "required": [
@@ -543,12 +641,28 @@
                         "null"
                       ],
                       "description": "W-L-D going into the bout"
+                    },
+                    "country": {
+                      "type": "string",
+                      "description": "the boxer's country, ISO 3166-1 alpha-2 (the one he represents, else his citizenship, else his birthplace); schedule and results answers, a boxer with a page only"
                     }
                   },
                   "required": [
                     "name",
                     "record"
                   ]
+                },
+                "display": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "a",
+                      "b"
+                    ]
+                  },
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "description": "the order to show the two names in: ['a','b'] or ['b','a'] (the better-known boxer first, as boxerbook.com does: more Wikipedia language links, then the Boxerbook rating, then pro bouts). a, b, winner, forecast.p_a and market.p_a keep their meaning (side a); only the display order changes"
                 },
                 "winner": {
                   "enum": [
@@ -629,6 +743,7 @@
                 "date",
                 "a",
                 "b",
+                "display",
                 "winner",
                 "sources"
               ]
@@ -646,6 +761,10 @@
               "license": {
                 "const": "Boxerbook data terms"
               },
+              "terms": {
+                "type": "string",
+                "format": "uri"
+              },
               "url": {
                 "type": "string"
               }
@@ -659,12 +778,29 @@
           "as_of": {
             "type": "string"
           },
+          "shown_bouts": {
+            "type": "integer",
+            "description": "bouts in this answer"
+          },
+          "total_bouts": {
+            "type": "integer",
+            "description": "bouts in the asked window"
+          },
+          "more": {
+            "type": "string",
+            "description": "what the cap left out and how to ask for it"
+          },
+          "next_arguments": {
+            "type": "object",
+            "description": "the arguments of the call that returns the next page"
+          },
           "partial": {
             "type": "boolean",
             "description": "true when part of the data could not be read this time; retry in a minute for the full answer"
           }
         },
         "required": [
+          "cite",
           "bouts",
           "attribution",
           "as_of"
@@ -681,7 +817,7 @@
     {
       "name": "boxer",
       "title": "Boxer card",
-      "description": "One boxer's card by name, slug or Boxerbook id: country, division, record (W-L-D, KOs), stance, height, reach, birth date, nickname, next fight, last result, Boxerbook rating and, when known, the record as betting favourite and underdog. A name goes through the site search and returns the best match (other_matches lists the next ones: check them when the name is common). Cite the url.",
+      "description": "One boxer's card by name, slug or Boxerbook id: country, division, record (W-L-D, KOs), stance, height, reach, birth year, nickname, next fight, last result, Boxerbook rating and, when known, the record as market favourite and underdog. A name returns the best match of the site search; other_matches lists the next ones when the name is shared. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -690,6 +826,17 @@
             "description": "a boxer's name, slug (giorgio-visioli) or Boxerbook id",
             "minLength": 1,
             "maxLength": 80
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         },
         "required": [
@@ -699,6 +846,10 @@
       "outputSchema": {
         "type": "object",
         "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
           "id": {
             "type": "integer"
           },
@@ -727,35 +878,31 @@
             ]
           },
           "record": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "w": {
-                    "type": "integer"
-                  },
-                  "l": {
-                    "type": "integer"
-                  },
-                  "d": {
-                    "type": "integer"
-                  },
-                  "ko": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "w",
-                  "l",
-                  "d"
-                ]
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "w": {
+                "type": "integer"
               },
-              {
-                "type": "null"
+              "l": {
+                "type": "integer"
+              },
+              "d": {
+                "type": "integer"
+              },
+              "ko": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
               }
+            },
+            "required": [
+              "w",
+              "l",
+              "d"
             ]
           },
           "record_source": {
@@ -803,134 +950,123 @@
             ]
           },
           "next_fight": {
-            "oneOf": [
-              {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "bout_id": {
+                "type": "integer"
+              },
+              "date": {
+                "type": "string"
+              },
+              "start_utc": {
+                "type": "string"
+              },
+              "opponent": {
                 "type": "object",
                 "properties": {
-                  "bout_id": {
+                  "id": {
                     "type": "integer"
                   },
-                  "date": {
+                  "name": {
                     "type": "string"
                   },
-                  "start_utc": {
-                    "type": "string"
-                  },
-                  "opponent": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "integer"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "slug": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "name"
-                    ]
-                  },
-                  "url": {
+                  "slug": {
                     "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "name"
+                ]
               },
-              {
-                "type": "null"
+              "url": {
+                "type": "string"
               }
-            ]
+            }
           },
           "last_result": {
-            "oneOf": [
-              {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "bout_id": {
+                "type": "integer"
+              },
+              "date": {
+                "type": "string"
+              },
+              "opponent": {
                 "type": "object",
                 "properties": {
-                  "bout_id": {
+                  "id": {
                     "type": "integer"
                   },
-                  "date": {
+                  "name": {
                     "type": "string"
                   },
-                  "opponent": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "integer"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "slug": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "name"
-                    ]
-                  },
-                  "result": {
-                    "enum": [
-                      "W",
-                      "L",
-                      "D",
-                      "NC",
-                      null
-                    ]
-                  },
-                  "method": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "round": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ]
-                  },
-                  "url": {
+                  "slug": {
                     "type": "string"
                   }
-                }
+                },
+                "required": [
+                  "name"
+                ]
               },
-              {
-                "type": "null"
+              "result": {
+                "enum": [
+                  "W",
+                  "L",
+                  "D",
+                  "NC",
+                  null
+                ]
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "round": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": "string"
               }
-            ]
+            }
           },
           "rating": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "mu": {
-                    "type": "number"
-                  },
-                  "rd": {
-                    "type": "number"
-                  },
-                  "division_rank": {
-                    "type": [
-                      "integer",
-                      "null"
-                    ]
-                  },
-                  "confidence": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                }
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "mu": {
+                "type": "number"
               },
-              {
-                "type": "null"
+              "rd": {
+                "type": "number"
+              },
+              "division_rank": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "confidence": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "how settled the rating is, 0 to 1"
               }
-            ]
+            }
           },
           "market_record": {
             "type": "object",
@@ -976,6 +1112,10 @@
               },
               "license": {
                 "const": "Boxerbook data terms"
+              },
+              "terms": {
+                "type": "string",
+                "format": "uri"
               },
               "url": {
                 "type": "string"
@@ -1041,6 +1181,7 @@
           }
         },
         "required": [
+          "cite",
           "id",
           "slug",
           "name",
@@ -1061,7 +1202,7 @@
     {
       "name": "next_fight",
       "title": "Next fight of a boxer",
-      "description": "A boxer's next scheduled bout (by name, slug or id): date, start_utc (card start in UTC), opponent, venue, broadcasters, Boxerbook forecast and market consensus when known; next_fight is null when none is on record (last_result is then the latest bout). Cite the url.",
+      "description": "A boxer's next scheduled bout (by name, slug or id): date, start_utc (card start in UTC), opponent, venue, broadcasters, Boxerbook forecast and market consensus when known, and the bout's boxerbook.com url. Answers \"when does X fight next\", \"what time is X's fight\" and \"where can I watch X\", asked in any language. next_fight is null when none is on record (last_result is then the latest bout). Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1070,6 +1211,17 @@
             "description": "a boxer's name, slug (giorgio-visioli) or Boxerbook id",
             "minLength": 1,
             "maxLength": 80
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         },
         "required": [
@@ -1079,6 +1231,10 @@
       "outputSchema": {
         "type": "object",
         "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
           "boxer": {
             "type": "object",
             "properties": {
@@ -1097,49 +1253,83 @@
             ]
           },
           "next_fight": {
-            "oneOf": [
-              {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "bout_id": {
+                "type": "integer"
+              },
+              "date": {
+                "type": "string"
+              },
+              "start_utc": {
+                "type": "string",
+                "description": "ISO UTC start of the card, when known"
+              },
+              "status": {
+                "type": "string"
+              },
+              "opponent": {
                 "type": "object",
                 "properties": {
-                  "bout_id": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              "title_text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "scheduled_rounds": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "venue": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "country": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "event": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
                     "type": "integer"
                   },
                   "date": {
-                    "type": "string"
-                  },
-                  "start_utc": {
-                    "type": "string",
-                    "description": "ISO UTC start of the card, when known"
-                  },
-                  "status": {
-                    "type": "string"
-                  },
-                  "opponent": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "integer"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "slug": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "name"
-                    ]
-                  },
-                  "title_text": {
                     "type": [
                       "string",
-                      "null"
-                    ]
-                  },
-                  "scheduled_rounds": {
-                    "type": [
-                      "integer",
                       "null"
                     ]
                   },
@@ -1161,212 +1351,9 @@
                       "null"
                     ]
                   },
-                  "event": {
-                    "oneOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "integer"
-                          },
-                          "date": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "venue": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "city": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "country": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "promoter": {
-                            "type": [
-                              "string",
-                              "null"
-                            ]
-                          },
-                          "url": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "broadcasts": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "platform": {
-                          "type": "string"
-                        },
-                        "region": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "url": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "platform"
-                      ]
-                    }
-                  },
-                  "forecast": {
-                    "type": "object",
-                    "properties": {
-                      "p_a": {
-                        "type": "number",
-                        "description": "Boxerbook model probability that side a wins"
-                      },
-                      "as_of": {
-                        "type": "string"
-                      },
-                      "run_id": {
-                        "type": [
-                          "integer",
-                          "null"
-                        ]
-                      }
-                    },
-                    "required": [
-                      "p_a",
-                      "as_of"
-                    ]
-                  },
-                  "market": {
-                    "type": "object",
-                    "properties": {
-                      "favourite": {
-                        "enum": [
-                          "a",
-                          "b"
-                        ]
-                      },
-                      "p_a": {
-                        "type": "number",
-                        "description": "no-vig consensus probability of side a"
-                      },
-                      "books": {
-                        "type": "integer"
-                      },
-                      "snapshot_at": {
-                        "type": "string"
-                      },
-                      "via": {
-                        "const": "The Odds API consensus"
-                      },
-                      "opening": {
-                        "type": "object",
-                        "properties": {
-                          "p_a": {
-                            "type": "number"
-                          },
-                          "snapshot_at": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "p_a",
-                          "snapshot_at"
-                        ],
-                        "description": "the opening line (first live snapshot); /v1/bouts/{id} only"
-                      }
-                    },
-                    "required": [
-                      "favourite",
-                      "p_a",
-                      "books",
-                      "snapshot_at",
-                      "via"
-                    ]
-                  },
-                  "url": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "bout_id",
-                  "date",
-                  "opponent",
-                  "broadcasts",
-                  "url"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "last_result": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "bout_id": {
-                    "type": "integer"
-                  },
-                  "date": {
-                    "type": "string"
-                  },
-                  "opponent": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "integer"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "slug": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "name"
-                    ]
-                  },
-                  "result": {
-                    "enum": [
-                      "W",
-                      "L",
-                      "D",
-                      "NC",
-                      null
-                    ]
-                  },
-                  "method": {
+                  "promoter": {
                     "type": [
                       "string",
-                      "null"
-                    ]
-                  },
-                  "round": {
-                    "type": [
-                      "integer",
                       "null"
                     ]
                   },
@@ -1375,10 +1362,167 @@
                   }
                 }
               },
-              {
-                "type": "null"
+              "broadcasts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "platform": {
+                      "type": "string"
+                    },
+                    "region": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "url": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "platform"
+                  ]
+                }
+              },
+              "forecast": {
+                "type": "object",
+                "properties": {
+                  "p_a": {
+                    "type": "number",
+                    "description": "Boxerbook model probability that side a wins"
+                  },
+                  "as_of": {
+                    "type": "string"
+                  },
+                  "run_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "p_a",
+                  "as_of"
+                ]
+              },
+              "market": {
+                "type": "object",
+                "properties": {
+                  "favourite": {
+                    "enum": [
+                      "a",
+                      "b"
+                    ]
+                  },
+                  "p_a": {
+                    "type": "number",
+                    "description": "no-vig consensus probability of side a"
+                  },
+                  "books": {
+                    "type": "integer"
+                  },
+                  "snapshot_at": {
+                    "type": "string"
+                  },
+                  "via": {
+                    "const": "The Odds API consensus"
+                  },
+                  "opening": {
+                    "type": "object",
+                    "properties": {
+                      "p_a": {
+                        "type": "number"
+                      },
+                      "snapshot_at": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "p_a",
+                      "snapshot_at"
+                    ],
+                    "description": "the opening line (first live snapshot); /v1/bouts/{id} only"
+                  }
+                },
+                "required": [
+                  "favourite",
+                  "p_a",
+                  "books",
+                  "snapshot_at",
+                  "via"
+                ]
+              },
+              "url": {
+                "type": "string"
               }
+            },
+            "required": [
+              "bout_id",
+              "date",
+              "opponent",
+              "broadcasts",
+              "url"
             ]
+          },
+          "last_result": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "bout_id": {
+                "type": "integer"
+              },
+              "date": {
+                "type": "string"
+              },
+              "opponent": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              "result": {
+                "enum": [
+                  "W",
+                  "L",
+                  "D",
+                  "NC",
+                  null
+                ]
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "round": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": "string"
+              }
+            }
           },
           "url": {
             "type": "string"
@@ -1391,6 +1535,10 @@
               },
               "license": {
                 "const": "Boxerbook data terms"
+              },
+              "terms": {
+                "type": "string",
+                "format": "uri"
               },
               "url": {
                 "type": "string"
@@ -1412,6 +1560,7 @@
           }
         },
         "required": [
+          "cite",
           "boxer",
           "next_fight",
           "url",
@@ -1430,23 +1579,41 @@
     {
       "name": "bout",
       "title": "Bout",
-      "description": "One bout in full by Boxerbook bout id: both boxers with records going in, status, result (winner, method, round, time), start_utc, venue, card, broadcasters, sources, Boxerbook forecast with its signals and the market consensus when known. Cite the url.",
+      "description": "One bout in full by Boxerbook bout id, or by two boxers (two surnames, e.g. \"Fury vs Joshua\"): both boxers with records going in, status, result (winner, method, round, time), start_utc, venue, card, broadcasters, sources, the weigh-in (weight per side, missed weight), fight-week facts, and when known the Boxerbook forecast (win probability of side a) with its signals per side (age, layoff, last five, KO rate, rating mu and rd with its 12-month trend, home, height, reach, stance) and the market odds consensus (no-vig, number of books, opening line): the features of a fight model or a pre-fight analysis, one bout per call. Answers \"have A and B ever fought\", \"head to head\" and \"when is A vs B\", asked in any language: by names it returns their scheduled bout (else their latest) with head_to_head, and when they never met head_to_head alone says so, with each side's record, last fights and next bout. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "id": {
             "type": "integer",
             "minimum": 1,
-            "description": "Boxerbook bout id (from a schedule, results, search or a /bouts/<id> url)"
+            "description": "Boxerbook bout id (the id of a bout in any Boxerbook answer, or the number in a boxerbook.com/bouts/<id>/<slug> url)"
+          },
+          "query": {
+            "type": "string",
+            "description": "instead of id: two boxers as \"A vs B\", two surnames, e.g. \"Fury vs Joshua\"",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
-        },
-        "required": [
-          "id"
-        ]
+        }
       },
       "outputSchema": {
         "type": "object",
         "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
           "id": {
             "type": "integer"
           },
@@ -1489,6 +1656,10 @@
                   "null"
                 ],
                 "description": "W-L-D going into the bout"
+              },
+              "country": {
+                "type": "string",
+                "description": "the boxer's country, ISO 3166-1 alpha-2 (the one he represents, else his citizenship, else his birthplace); schedule and results answers, a boxer with a page only"
               }
             },
             "required": [
@@ -1514,12 +1685,28 @@
                   "null"
                 ],
                 "description": "W-L-D going into the bout"
+              },
+              "country": {
+                "type": "string",
+                "description": "the boxer's country, ISO 3166-1 alpha-2 (the one he represents, else his citizenship, else his birthplace); schedule and results answers, a boxer with a page only"
               }
             },
             "required": [
               "name",
               "record"
             ]
+          },
+          "display": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "a",
+                "b"
+              ]
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "the order to show the two names in: ['a','b'] or ['b','a'] (the better-known boxer first, as boxerbook.com does: more Wikipedia language links, then the Boxerbook rating, then pro bouts). a, b, winner, forecast.p_a and market.p_a keep their meaning (side a); only the display order changes"
           },
           "winner": {
             "enum": [
@@ -1579,52 +1766,48 @@
             ]
           },
           "event": {
-            "oneOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "integer"
-                  },
-                  "date": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "venue": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "city": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "country": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "promoter": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "url": {
-                    "type": "string"
-                  }
-                }
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
               },
-              {
-                "type": "null"
+              "date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "venue": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "city": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "country": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "promoter": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": "string"
               }
-            ]
+            }
           },
           "broadcasts": {
             "type": "array",
@@ -1853,8 +2036,16 @@
             },
             "description": "facts said in fight-week videos (press conference, weigh-in, face-off, open workout): only accepted ones, at most 24; no predictions or opinions"
           },
+          "story": {
+            "type": "string",
+            "description": "«The story of the fight» of a completed bout, in English: a report written from the broadcast commentary, Boxerbook data and the press, every sentence checked against its sources (the bout page lists them); paragraphs separated by a blank line, text only (the charts are on the page). Absent when the bout has none"
+          },
           "url": {
             "type": "string"
+          },
+          "merged_from": {
+            "type": "integer",
+            "description": "present when the id asked was a duplicate merged into this bout (the id asked; id and url are this bout's)"
           },
           "attribution": {
             "type": "object",
@@ -1864,6 +2055,10 @@
               },
               "license": {
                 "const": "Boxerbook data terms"
+              },
+              "terms": {
+                "type": "string",
+                "format": "uri"
               },
               "url": {
                 "type": "string"
@@ -1878,20 +2073,296 @@
           "as_of": {
             "type": "string"
           },
+          "head_to_head": {
+            "type": "object",
+            "required": [
+              "summary",
+              "met",
+              "bouts",
+              "a",
+              "b"
+            ],
+            "description": "the two boxers named in the query: whether and how often they met, the bout between them that is scheduled, and each side's record, last fights and next bout",
+            "properties": {
+              "summary": {
+                "type": "string",
+                "description": "one sentence: how often they met and with what result, or that they never fought; the scheduled date; both records"
+              },
+              "met": {
+                "type": "integer",
+                "description": "completed bouts between them"
+              },
+              "scheduled": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "date": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              },
+              "bouts": {
+                "type": "array",
+                "description": "the bouts between them, newest first (at most 5)",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "winner": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "method": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "round": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "date",
+                    "status",
+                    "url"
+                  ]
+                }
+              },
+              "a": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "url",
+                  "last_fights"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "record": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "W-L-D today"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "last_fights": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "date": {
+                          "type": "string"
+                        },
+                        "opponent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "result": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "W, L, D or NC for this side"
+                        },
+                        "method": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "round": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "date",
+                        "url"
+                      ]
+                    },
+                    "description": "the last three completed bouts, newest first"
+                  },
+                  "next_bout": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "date": {
+                        "type": "string"
+                      },
+                      "opponent": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "b": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "url",
+                  "last_fights"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "record": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "W-L-D today"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "last_fights": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "date": {
+                          "type": "string"
+                        },
+                        "opponent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "result": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "W, L, D or NC for this side"
+                        },
+                        "method": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "round": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "date",
+                        "url"
+                      ]
+                    },
+                    "description": "the last three completed bouts, newest first"
+                  },
+                  "next_bout": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "date": {
+                        "type": "string"
+                      },
+                      "opponent": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "note": {
+            "type": "string",
+            "description": "when the two never met: the head to head summary (no bout fields then)"
+          },
           "partial": {
             "type": "boolean",
             "description": "true when part of the data could not be read this time; retry in a minute for the full answer"
           }
         },
         "required": [
-          "id",
-          "date",
-          "status",
-          "a",
-          "b",
-          "broadcasts",
-          "sources",
-          "fight_week",
+          "cite",
           "url",
           "attribution",
           "as_of"
@@ -1908,7 +2379,7 @@
     {
       "name": "where_to_watch",
       "title": "Where to watch",
-      "description": "The broadcasters (platform, region, link) of a bout or of a whole card, with the card start time in UTC. Give bout_id or event_id. An empty list means none is on record yet. Cite the url.",
+      "description": "Where to watch a fight and when it starts: the broadcasters (platform, region, link) of a bout or of a whole card, with the card start time in UTC and the boxerbook.com url of the bout or card; or, with platform (e.g. \"DAZN\", \"ProBox TV\"), what is on that platform: its upcoming cards and those of the last 12 months. Answers \"where can I watch A vs B\", \"what channel is the fight on\" and \"what time does it start\", asked in any language. Give bout_id, event_id, query (two boxers \"A vs B\", or one boxer for the next bout) or platform. An empty list means none is on record yet. hub_url is the site's «Where to watch boxing this week» page. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1921,16 +2392,44 @@
             "type": "integer",
             "minimum": 1,
             "description": "Boxerbook event (card) id"
+          },
+          "query": {
+            "type": "string",
+            "description": "instead of an id: two boxers as \"A vs B\" (their scheduled bout, else their latest), or one boxer by name (the next bout on record)",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "platform": {
+            "type": "string",
+            "description": "instead of an id: a broadcast or streaming platform by name, e.g. DAZN, ESPN+, ProBox TV, BXNG TV",
+            "minLength": 2,
+            "maxLength": 60
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         }
       },
       "outputSchema": {
         "type": "object",
         "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
           "kind": {
             "enum": [
               "bout",
-              "event"
+              "event",
+              "platform"
             ]
           },
           "id": {
@@ -2033,6 +2532,166 @@
           "url": {
             "type": "string"
           },
+          "platform_pages": {
+            "type": "array",
+            "description": "the boxerbook.com page of each listed platform",
+            "items": {
+              "type": "object",
+              "properties": {
+                "platform": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "platform",
+                "url"
+              ]
+            }
+          },
+          "platform": {
+            "type": "object",
+            "description": "kind platform: the platform (kind: subscription, free, ppv or promoter; small: a small or mid-size platform; home: its website)",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "small": {
+                "type": "boolean"
+              },
+              "home": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "kind"
+            ]
+          },
+          "upcoming": {
+            "type": "array",
+            "description": "kind platform: its cards to come, nearest first",
+            "items": {
+              "type": "object",
+              "properties": {
+                "event_id": {
+                  "type": "integer"
+                },
+                "date": {
+                  "type": "string"
+                },
+                "start_utc": {
+                  "type": "string",
+                  "description": "ISO UTC start of the card, when known"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "the main bout, else the venue"
+                },
+                "venue": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "city": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "country": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "regions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "event_id",
+                "date",
+                "title",
+                "url"
+              ]
+            }
+          },
+          "recent": {
+            "type": "array",
+            "description": "kind platform: its cards of the last 12 months, newest first (at most 10)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "event_id": {
+                  "type": "integer"
+                },
+                "date": {
+                  "type": "string"
+                },
+                "start_utc": {
+                  "type": "string",
+                  "description": "ISO UTC start of the card, when known"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "the main bout, else the venue"
+                },
+                "venue": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "city": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "country": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "regions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "event_id",
+                "date",
+                "title",
+                "url"
+              ]
+            }
+          },
+          "hub_url": {
+            "type": "string",
+            "description": "the «Where to watch boxing this week» page"
+          },
           "attribution": {
             "type": "object",
             "properties": {
@@ -2041,6 +2700,10 @@
               },
               "license": {
                 "const": "Boxerbook data terms"
+              },
+              "terms": {
+                "type": "string",
+                "format": "uri"
               },
               "url": {
                 "type": "string"
@@ -2062,8 +2725,8 @@
           }
         },
         "required": [
+          "cite",
           "kind",
-          "id",
           "title",
           "broadcasts",
           "url",
@@ -2082,7 +2745,7 @@
     {
       "name": "rankings",
       "title": "Division rankings",
-      "description": "The top 15 of a division: the Boxerbook rating (default) or the latest list of a publisher (WBC, WBA, IBF, WBO, The Ring, TBRB), with records. Division by code (hea, wel, w_fea) or name (heavyweight, women's flyweight). Cite the url.",
+      "description": "The top 15 of a division: the Boxerbook rating (default) or the latest list of a publisher (WBC, WBA, IBF, WBO, The Ring, TBRB), with records. Division by code (hea, wel, w_fea) or name (heavyweight, women's flyweight). Pound for pound: division p4p (or \"pound for pound\", pfp) gives the Boxerbook P4P top 25 of men, w_p4p (or \"women's p4p\") the top 15 of women, ranked by the Boxerbook rating (mu − 2·rd measured against the elite of the boxer's division; active within 18 months, 10+ bouts, 2+ quality wins in 36 months); only Boxerbook has a P4P list, no publisher's is stored. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2101,10 +2764,22 @@
               "ibf",
               "wbo",
               "ring",
-              "tbrb"
+              "tbrb",
+              "wban"
             ],
             "default": "boxerbook",
-            "description": "boxerbook (the Boxerbook rating), wbc, wba, ibf, wbo, ring or tbrb"
+            "description": "boxerbook (the Boxerbook rating), wbc, wba, ibf, wbo, ring, tbrb or wban (WBAN World Ratings, women only)"
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         },
         "required": [
@@ -2114,6 +2789,10 @@
       "outputSchema": {
         "type": "object",
         "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
           "division": {
             "type": "object",
             "properties": {
@@ -2145,7 +2824,8 @@
               "ibf",
               "wbo",
               "ring",
-              "tbrb"
+              "tbrb",
+              "wban"
             ]
           },
           "list_date": {
@@ -2153,6 +2833,65 @@
               "string",
               "null"
             ]
+          },
+          "title_changes": {
+            "type": "array",
+            "description": "WBC, WBA, IBF and WBO lists only, present when it applies: the body's world title of this division decided in the ring after list_date (a completed bout, official or reported by two independent publishers). The champion holds the title from that result until the body's next list confirms it; how: won (from the holder), vacant (the vacant title won), retained (a defence after the list), unknown (no list named the holder before the bout); title: world, or regular (the WBA regular title beside a super champion)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string"
+                },
+                "title": {
+                  "enum": [
+                    "world",
+                    "regular"
+                  ]
+                },
+                "how": {
+                  "enum": [
+                    "won",
+                    "vacant",
+                    "retained",
+                    "unknown"
+                  ]
+                },
+                "champion": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ]
+                },
+                "opponent": {
+                  "type": "string"
+                },
+                "bout_url": {
+                  "type": "string"
+                },
+                "title_url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "date",
+                "title",
+                "how",
+                "champion",
+                "bout_url"
+              ]
+            }
           },
           "items": {
             "type": "array",
@@ -2180,8 +2919,34 @@
                 "rd": {
                   "type": "number"
                 },
+                "score": {
+                  "type": "number",
+                  "description": "pound for pound only: the P4P score, the order of the list: mu − 2·rd measured against the elite of the boxer's division (method at /rankings/p4p#how)"
+                },
+                "division": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "pound for pound only: the boxer's Boxerbook rating division code"
+                },
                 "record": {
                   "type": "string"
+                },
+                "last_bout_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "pound for pound only"
+                },
+                "quality_wins": {
+                  "type": "integer",
+                  "description": "pound for pound only: wins in the last 36 months over opponents rated like a division top-15 boxer at the time"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "the boxer's boxerbook.com page"
                 }
               },
               "required": [
@@ -2202,6 +2967,10 @@
               "license": {
                 "const": "Boxerbook data terms"
               },
+              "terms": {
+                "type": "string",
+                "format": "uri"
+              },
               "url": {
                 "type": "string"
               }
@@ -2221,6 +2990,7 @@
           }
         },
         "required": [
+          "cite",
           "division",
           "publisher",
           "items",
@@ -2237,9 +3007,374 @@
       }
     },
     {
+      "name": "gyms_near",
+      "title": "Boxing gyms near a place",
+      "description": "Boxing gyms and boxing clubs near a city, a ZIP or postal code, or the user's location: name, address, distance, the gym's own phone and website, Google Maps rating with its number of reviews, the programs its website names (kids / youth, women, boxing fitness, amateur, pro), federation club, notable boxers, a short description when one is written, and the boxerbook.com page of each gym and of its city. Answers \"boxing gym near me\", \"where can I train boxing in Austin\", \"boxing classes for kids in Brooklyn\", \"best boxing gyms in Toronto\", \"boxing clubs in London\" (the UK capital; London, Ontario is country CA) and \"is there a boxing club near 10115\", asked in any language. Give place (a city such as \"Brooklyn\", \"Austin, TX\" or \"Manchester\", a ZIP or postal code, a state or region, or a gym's name), or lat and lon when the user's location is known; need keeps the gyms with kids classes, women's classes, boxing fitness or competition boxing. A city lists its gyms with the most complete listings and the best-reviewed first, then the nearest around it; a point or a postal code lists them nearest first within radius_km. At most 20 gyms. The directory covers the United States, Canada, the United Kingdom, Germany, France and Switzerland (about 13,000 gyms); elsewhere the answer is empty and says so. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "place": {
+            "type": "string",
+            "description": "a city (\"Brooklyn\", \"Austin, TX\", \"Toronto\"), a ZIP or postal code (\"11201\", \"M5V 2T6\", \"SW1A 1AA\", \"10115\"), a state or region, or a gym's name; leave it out to search around lat and lon",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "description": "the user's latitude, when known and no place is named (used for this answer only, never stored)"
+          },
+          "lon": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "description": "the user's longitude, with lat"
+          },
+          "radius_km": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 25,
+            "description": "how far around the point, the postal code or the city centre to look, in km (10 mi = 16 km)"
+          },
+          "country": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 country to keep to when a city name exists in several countries: US, CA, GB (UK), DE, FR or CH",
+            "pattern": "^[A-Za-z]{2}$"
+          },
+          "need": {
+            "type": "string",
+            "enum": [
+              "kids",
+              "women",
+              "fitness",
+              "competition"
+            ],
+            "description": "only gyms with kids or youth classes (kids), women's classes (women), boxing fitness classes (fitness) or amateur / pro boxing (competition)"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 10,
+            "description": "how many gyms"
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
+          "query": {
+            "type": "object",
+            "properties": {
+              "place": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "country": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "need": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "radius_km": {
+                "type": "integer"
+              }
+            }
+          },
+          "match": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "city",
+                  "postal_code",
+                  "point",
+                  "region",
+                  "gym_name",
+                  "none"
+                ]
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "label"
+            ],
+            "description": "what the place was read as"
+          },
+          "title": {
+            "type": "string"
+          },
+          "order": {
+            "type": "string"
+          },
+          "distances_from": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "string",
+            "description": "the countries of the gym directory"
+          },
+          "total": {
+            "type": "integer",
+            "description": "gyms on record for this place (and need); a city: its own gyms, plus every gym within radius_km of its centre when the city alone has fewer than limit (the area is read only then, to keep the answer to one statement)"
+          },
+          "gyms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "gym, club or academy"
+                },
+                "address": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "city": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "region": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "country": {
+                  "type": "string",
+                  "description": "ISO 3166-1 alpha-2"
+                },
+                "distance_km": {
+                  "type": "number",
+                  "description": "from the point, postal code or city centre of the answer (distances_from), when the gym has coordinates"
+                },
+                "distance": {
+                  "type": "string",
+                  "description": "the same in miles (US) or km, for display"
+                },
+                "phone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "only a number the gym publishes itself"
+                },
+                "website": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "instagram": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "google_rating": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "rating": {
+                      "type": "number"
+                    },
+                    "reviews": {
+                      "type": "integer"
+                    },
+                    "source": {
+                      "const": "Google Maps"
+                    }
+                  },
+                  "required": [
+                    "rating",
+                    "reviews"
+                  ]
+                },
+                "programs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "programs named on the gym's own website: youth / kids classes, women's classes, boxing fitness, amateur boxing, professional boxing, Olympic-style boxing, kickboxing, MMA"
+                },
+                "federation_club": {
+                  "type": "boolean",
+                  "description": "listed in the national federation's club registry"
+                },
+                "verified_owner": {
+                  "type": "boolean",
+                  "description": "the owner has verified the listing on Boxerbook"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "2-3 sentences written from facts on the gym's own website or Wikipedia, when checked"
+                },
+                "notable_boxers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "url"
+                    ]
+                  },
+                  "description": "professional boxers the gym names, with their Boxerbook pages"
+                },
+                "map_url": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "the gym's boxerbook.com page"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "country",
+                "programs",
+                "federation_club",
+                "verified_owner",
+                "url"
+              ]
+            }
+          },
+          "other_places": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "gyms": {
+                  "type": "integer"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "label",
+                "gyms",
+                "url"
+              ]
+            },
+            "description": "other cities of that name, the cities of a region, or the nearest city with gyms"
+          },
+          "url": {
+            "type": "string",
+            "description": "the boxerbook.com page of the place (city, region, postal code search) or the gyms hub"
+          },
+          "attribution": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "const": "Boxerbook"
+              },
+              "license": {
+                "const": "Boxerbook data terms"
+              },
+              "terms": {
+                "type": "string",
+                "format": "uri"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source",
+              "license",
+              "url"
+            ]
+          },
+          "as_of": {
+            "type": "string"
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "true when part of the data could not be read this time; retry in a minute for the full answer"
+          }
+        },
+        "required": [
+          "cite",
+          "match",
+          "title",
+          "gyms",
+          "total",
+          "url",
+          "attribution",
+          "as_of"
+        ]
+      },
+      "annotations": {
+        "title": "Boxing gyms near a place",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
       "name": "search_boxers",
       "title": "Search boxers",
-      "description": "Find boxers by name (at most 20), best match first: id, slug, name, country, division, record. Use this when a name is ambiguous or its spelling unsure, then call boxer or next_fight with the id. Cite the url.",
+      "description": "Find boxers by name (at most 20), best match first: id, slug, name, country, division, record, url. Lists the boxers who share a name or a close spelling. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2248,6 +3383,17 @@
             "description": "a name or part of it",
             "minLength": 2,
             "maxLength": 80
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         },
         "required": [
@@ -2257,6 +3403,10 @@
       "outputSchema": {
         "type": "object",
         "properties": {
+          "cite": {
+            "type": "string",
+            "description": "the markdown link to quote with any fact of this answer: Source: [Boxerbook](<url of the main page>)"
+          },
           "query": {
             "type": "string"
           },
@@ -2316,6 +3466,10 @@
               "license": {
                 "const": "Boxerbook data terms"
               },
+              "terms": {
+                "type": "string",
+                "format": "uri"
+              },
               "url": {
                 "type": "string"
               }
@@ -2335,6 +3489,7 @@
           }
         },
         "required": [
+          "cite",
           "results",
           "attribution",
           "as_of"
@@ -2351,15 +3506,26 @@
     {
       "name": "search",
       "title": "Search Boxerbook",
-      "description": "Search the whole catalog with one query: boxers by name, bouts by two surnames (\"Inoue vs Nakatani\"), their cards, and divisions (\"heavyweight rankings\"); an id such as bout:123 is looked up directly. Each hit has an id for fetch, a title and its boxerbook.com url; ChatGPT connectors and deep research, which call nothing but search and fetch, start here. No match returns an empty list. Cite the url.",
+      "description": "Search the whole catalog with one query: boxers by name, bouts and head to head by two surnames, e.g. \"Fury vs Joshua\" (when they never met, head_to_head says so with both records and last fights), their cards, and divisions (\"heavyweight rankings\"); an id such as bout:123 is looked up directly. Each hit has a document id, a title and its boxerbook.com url. No match returns an empty list. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "query": {
             "type": "string",
-            "description": "what to look for: a boxer, two boxers, a division",
+            "description": "what to look for: a boxer, two boxers (\"Fury vs Joshua\"), a division",
             "minLength": 1,
             "maxLength": 200
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         },
         "required": [
@@ -2369,9 +3535,6 @@
       "outputSchema": {
         "type": "object",
         "properties": {
-          "query": {
-            "type": "string"
-          },
           "results": {
             "type": "array",
             "items": {
@@ -2379,13 +3542,15 @@
               "properties": {
                 "id": {
                   "type": "string",
-                  "description": "pass to fetch: boxer:<id>, bout:<id>, event:<id> or rankings:<DIV>"
+                  "description": "the document id: boxer:<id>, bout:<id>, event:<id> or rankings:<DIV>"
                 },
                 "title": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 },
                 "url": {
-                  "type": "string"
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -2396,31 +3561,284 @@
               "additionalProperties": false
             }
           },
-          "url": {
-            "type": "string"
-          },
-          "attribution": {
+          "head_to_head": {
             "type": "object",
-            "properties": {
-              "source": {
-                "const": "Boxerbook"
-              },
-              "license": {
-                "const": "Boxerbook data terms"
-              },
-              "url": {
-                "type": "string"
-              }
-            },
             "required": [
-              "source",
-              "license",
-              "url"
-            ]
-          },
-          "as_of": {
-            "type": "string",
-            "description": "ISO UTC time of this answer"
+              "summary",
+              "met",
+              "bouts",
+              "a",
+              "b"
+            ],
+            "description": "the two boxers named in the query: whether and how often they met, the bout between them that is scheduled, and each side's record, last fights and next bout",
+            "properties": {
+              "summary": {
+                "type": "string",
+                "description": "one sentence: how often they met and with what result, or that they never fought; the scheduled date; both records"
+              },
+              "met": {
+                "type": "integer",
+                "description": "completed bouts between them"
+              },
+              "scheduled": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "date": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                }
+              },
+              "bouts": {
+                "type": "array",
+                "description": "the bouts between them, newest first (at most 5)",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "winner": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "method": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "round": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "date",
+                    "status",
+                    "url"
+                  ]
+                }
+              },
+              "a": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "url",
+                  "last_fights"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "record": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "W-L-D today"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "last_fights": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "date": {
+                          "type": "string"
+                        },
+                        "opponent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "result": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "W, L, D or NC for this side"
+                        },
+                        "method": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "round": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "date",
+                        "url"
+                      ]
+                    },
+                    "description": "the last three completed bouts, newest first"
+                  },
+                  "next_bout": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "date": {
+                        "type": "string"
+                      },
+                      "opponent": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "b": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "url",
+                  "last_fights"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "record": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "W-L-D today"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "last_fights": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "date": {
+                          "type": "string"
+                        },
+                        "opponent": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "result": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "W, L, D or NC for this side"
+                        },
+                        "method": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "round": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "date",
+                        "url"
+                      ]
+                    },
+                    "description": "the last three completed bouts, newest first"
+                  },
+                  "next_bout": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "date": {
+                        "type": "string"
+                      },
+                      "opponent": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "url": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "partial": {
             "type": "boolean",
@@ -2428,9 +3846,7 @@
           }
         },
         "required": [
-          "results",
-          "attribution",
-          "as_of"
+          "results"
         ]
       },
       "annotations": {
@@ -2444,15 +3860,26 @@
     {
       "name": "fetch",
       "title": "Fetch a Boxerbook document",
-      "description": "The full document for an id returned by search: a boxer card, a bout (records, result, broadcasters, forecast, market, sources), a card with its bouts, or a division's rankings, as Markdown text with metadata. Pass the id unchanged; an unknown id returns an error. Cite the url.",
+      "description": "The full document for a Boxerbook document id: a boxer card, a bout (records, result, broadcasters, forecast, market, sources), a card with its bouts, or a division's rankings, as Markdown text with metadata. An unknown id returns an error. Pass lang matching the user's language (en, es, ru or ja) so the page links match it.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "description": "an id from search: boxer:<id>, bout:<id>, event:<id> or rankings:<DIV>",
+            "description": "a document id: boxer:<id>, bout:<id>, event:<id> or rankings:<DIV>",
             "minLength": 3,
             "maxLength": 120
+          },
+          "lang": {
+            "type": "string",
+            "enum": [
+              "en",
+              "es",
+              "ru",
+              "ja"
+            ],
+            "default": "en",
+            "description": "the user's language: en (default), es, ru or ja; the boxerbook.com page links of the answer follow it (a page without a translation keeps its English link)"
           }
         },
         "required": [
@@ -2470,13 +3897,15 @@
           },
           "text": {
             "type": "string",
-            "description": "the document as Markdown"
+            "description": "the document as Markdown; its last line is the markdown link of its boxerbook.com page"
           },
           "url": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1
           },
           "metadata": {
             "type": "object",
+            "description": "type and ids of the document, plus source, license, attribution_url, as_of (and partial when part of the data could not be read)",
             "additionalProperties": {
               "type": [
                 "string",
@@ -2485,33 +3914,6 @@
                 "null"
               ]
             }
-          },
-          "attribution": {
-            "type": "object",
-            "properties": {
-              "source": {
-                "const": "Boxerbook"
-              },
-              "license": {
-                "const": "Boxerbook data terms"
-              },
-              "url": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "source",
-              "license",
-              "url"
-            ]
-          },
-          "as_of": {
-            "type": "string",
-            "description": "ISO UTC time of this answer"
-          },
-          "partial": {
-            "type": "boolean",
-            "description": "true when part of the data could not be read this time; retry in a minute for the full answer"
           }
         },
         "required": [
@@ -2519,10 +3921,9 @@
           "title",
           "text",
           "url",
-          "metadata",
-          "attribution",
-          "as_of"
-        ]
+          "metadata"
+        ],
+        "additionalProperties": false
       },
       "annotations": {
         "title": "Fetch a Boxerbook document",

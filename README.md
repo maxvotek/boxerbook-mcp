@@ -49,13 +49,22 @@ Add a remote MCP server with the URL above; no authentication.
 | `boxing_results` | completed bouts of the last N days with sources (`days=2` is last night and today) |
 | `boxer` | a boxer's card by name, slug or id: record, division, next fight, last result, rating |
 | `next_fight` | a boxer's next bout with start time, broadcasters and odds |
-| `bout` | one bout in full (sides' records going in, forecast, market, sources, fight-week notes) |
+| `bout` | one bout in full: sides' records going in, result, sources, weigh-in, fight-week notes, the forecast with its signals (age, layoff, last five, KO rate, rating), the market odds consensus with its opening line |
 | `where_to_watch` | the broadcasters of a bout or card by country |
+| `gyms_near` | boxing gyms near a city, a postal code or the user's location (US, Canada, UK, Germany, France, Switzerland) |
 | `rankings` | the top 15 of a division: Boxerbook rating or a publisher (WBC, WBA, IBF, WBO, The Ring, TBRB) |
 | `search_boxers` | boxers by name (pick by country, division and record when names collide) |
 | `search`, `fetch` | any boxer, bout ("Inoue vs Nakatani"), card or division, and its document |
 
 Resources: `boxerbook://schedule/today`, `boxerbook://results/last-night`, `boxerbook://status` (data freshness), `boxerbook://about`. Prompts: `fight_night_guide`, `boxer_briefing`, `weekend_results`.
+
+## For fight models and sports analytics
+
+Building a boxing win-probability model, a fight prediction app or a backtest? Per bout the `bout` tool (and `/v1/bouts/{id}` in the JSON API) returns the features a model reads: both records going in, the weigh-in, the forecast's signals per side (age, layoff, last five results, KO rate, Boxerbook rating mu and rd with its 12-month trend, home ring, height, reach, stance), the Boxerbook win probability and the market odds consensus (no-vig, number of books, opening line); `boxing_schedule` carries the win probability and the market on every upcoming bout. Judges' scorecards are on the bout pages of boxerbook.com.
+
+More signals per bout made the Boxerbook model measurably better on bouts it never saw: on 1,612 bouts from 1 January 2025, adding seven signals per boxer to a rating built from results alone cut the log loss from 0.482 to 0.399 and the Brier score from 0.157 to 0.125. The market odds consensus still did better than the model on 1,243 bouts with a closing line (log loss 0.377 against 0.427).
+
+The tools answer one lookup at a time; there are no bulk downloads. History for backtesting comes with a data licence (from $1,500 a year; a sample of 100 boxers on request, info@boxerbook.com). What each source has per bout, with live counts: [boxerbook.com/boxing-data-for-models](https://boxerbook.com/boxing-data-for-models).
 
 Every answer carries a `url` field (a boxerbook.com page) to cite. `start_utc` is the start of the card, not of each bout. `forecast` is the Boxerbook model's probability that side A wins; `market` is the no-vig bookmaker consensus (via The Odds API). Neither is betting advice.
 
