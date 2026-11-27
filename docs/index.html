@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boxerbook: open boxing catalog, API and MCP server</title>
+<meta name="description" content="Boxerbook is an open catalog of professional boxing: boxers, bouts with sources, schedules with broadcasters, rankings and gyms. Free JSON API and MCP server.">
+<link rel="canonical" href="https://maxvotek.github.io/boxerbook-mcp/">
+<style>
+:root{color-scheme:light dark;--fg:#1a1a1a;--bg:#fff;--mut:#555;--ln:#0b57d0}
+@media (prefers-color-scheme:dark){:root{--fg:#e8e8e8;--bg:#141414;--mut:#aaa;--ln:#8ab4f8}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:680px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:1.6rem;margin:.2em 0}h2{font-size:1.15rem;margin-top:1.8em}
+a{color:var(--ln)}p.m,small{color:var(--mut)}
+code{font-size:.9em;word-break:break-all}
+ul{padding-left:1.2em}li{margin:.3em 0}
+</style>
+</head>
+<body>
+<main>
+<h1><a href="https://boxerbook.com/?utm_source=github-pages">Boxerbook</a></h1>
+<p class="m">Open catalog of professional boxing</p>
+
+<p><a href="https://boxerbook.com/?utm_source=github-pages">Boxerbook</a> is a free catalog of professional boxing worldwide:
+boxers and their records, bouts with the sources they were read from, upcoming cards with start times and broadcasters,
+results, world titles, publisher rankings (WBC, WBA, IBF, WBO, The Ring, TBRB) and a directory of boxing gyms.
+Every bout page lists its sources; when two sources disagree, the page shows both.</p>
+
+<p>On November 27, 2026 the catalog held 205,094 bouts since 1845 in 145 countries, read from 31 sources
+(<a href="https://boxerbook.com/database">counted daily</a>).</p>
+
+<h2>Pages</h2>
+<ul>
+<li><a href="https://boxerbook.com/where-to-watch">Where to watch boxing this week</a>: cards, start times and broadcasters by country</li>
+<li><a href="https://boxerbook.com/schedule">Boxing schedule</a>: upcoming fight nights</li>
+<li><a href="https://boxerbook.com/results">Boxing results</a> with their sources</li>
+<li><a href="https://boxerbook.com/rankings">Rankings</a>: the sanctioning bodies, The Ring, TBRB and the Boxerbook rating</li>
+<li><a href="https://boxerbook.com/boxers">Boxers</a>: records and bout histories</li>
+<li><a href="https://boxerbook.com/gyms">Boxing gyms</a> in the United States, Canada, the United Kingdom, Germany, France and Switzerland</li>
+<li><a href="https://boxerbook.com/database">The open boxing database</a>: what it holds and where the records come from</li>
+</ul>
+
+<h2>For developers and AI assistants</h2>
+<ul>
+<li>MCP server: <code>https://mcp.boxerbook.com/mcp</code> (Streamable HTTP, no key). Guides per client: <a href="https://mcp.boxerbook.com">mcp.boxerbook.com</a></li>
+<li>ChatGPT: <a href="https://chatgpt.com/plugins/plugin_asdk_app_6ae8b4aba58481919a8606e886bdfd50">Boxerbook in the ChatGPT plugin directory</a></li>
+<li>Claude: Settings → Connectors → Add custom connector, URL <code>https://mcp.boxerbook.com/mcp</code></li>
+<li>JSON API: <a href="https://boxerbook.com/developers">boxerbook.com/developers</a>, OpenAPI 3.1 at <a href="https://boxerbook.com/v1/openapi.json">/v1/openapi.json</a></li>
+<li>Data access and terms: <a href="https://boxerbook.com/data">boxerbook.com/data</a></li>
+<li>Source of this page and the server metadata: <a href="https://github.com/maxvotek/boxerbook-mcp">github.com/maxvotek/boxerbook-mcp</a></li>
+</ul>
+
+<h2>Using the data</h2>
+<p>Boxerbook data is free to read and cite with a link to the page each fact came from
+(credit «Data from Boxerbook (boxerbook.com)»). Bulk copies and commercial use are by agreement:
+<a href="mailto:info@boxerbook.com">info@boxerbook.com</a>.</p>
+
+<p><small>Boxerbook · <a href="https://boxerbook.com/about">About</a></small></p>
+</main>
+</body>
+</html>
